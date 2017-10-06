@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>WebGL Demo</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../webgl.css" type="text/css">
+  </head>
+
+  <body>
+    <canvas id="webGLCanvas" width="800" height="800"></canvas> 
+  </body>
+
+  <script>
+    main();
+    
+    function pixelsToRatio(pixel,height){
+        return pixel/height;
+    }
+
+    function main() {
+        
+        /*================Creating a canvas=================*/
+        const canvas = document.querySelector("#webGLCanvas");
+        // Initialize the GL context
+        const gl = canvas.getContext("webgl");
+         // Only continue if WebGL is available and working
+         if (!gl) {
+            alert("Unable to initialize WebGL. Your browser or machine may not support it.");
+            return;
+         }
+        // Set clear color to black, fully opaque
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        // Clear the color buffer with specified clear color
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        
+        //Midpoint Circle Algorithms
+        
+        height = gl.canvas.height/2;
+        width = gl.canvas.width/2;
+        var xCenter = pixelsToRatio(0,height);
+        var yCenter = pixelsToRatio(0,width);
+        
+        var vertices = [];
+        
+        //Step 1
+        var radiusPixel = 100; //Radius in pixels
+        
+        //Step 2
+        var d = (5/4) - radiusPixel;
+        var x = 0;
+        var y = radiusPixel;
+        
+        //Step 3
+        //Q1
+        vertices.push(xCenter+pixelsToRatio(x,width),yCenter+pixelsToRatio(y,height),0.0);
+        vertices.push(xCenter-pixelsToRatio(x,width),yCenter+pixelsToRatio(y,height),0.0);
+        vertices.push(xCenter+pixelsToRatio(x,width),yCenter-pixelsToRatio(y,height),0.0);
+        vertices.push(xCenter-pixelsToRatio(x,width),yCenter-pixelsToRatio(y,height),0.0);
+        vertices.push(xCenter+pixelsToRatio(y,height),yCenter+pixelsToRatio(x,width),0.0);
+        vertices.push(xCenter-pixelsToRatio(y,height),yCenter+pixelsToRatio(x,width),0.0);
+        vertices.push(xCenter+pixelsToRatio(y,height),yCenter-pixelsToRatio(x,width),0.0);
+        vertices.push(xCenter-pixelsToRatio(y,height),yCenter-pixelsToRatio(x,width),0.0);
+        
+        //Step 4
+        while(x <= y){
+            if (d<0){
+                d += 2*x+3;
+                x = x+1;
+                y = y;
+            }
+            else if (d >= 0){
+                d += 2*(x-y)+5;
+                x = x+1;
+                y = y-1;
+            }
+            if (x < y){
+                vertices.push(xCenter+pixelsToRatio(x,width),yCenter+pixelsToRatio(y,height),0.0);
+                vertices.push(xCenter-pixelsToRatio(x,width),yCenter+pixelsToRatio(y,height),0.0);
+                vertices.push(xCenter+pixelsToRatio(x,width),yCenter-pixelsToRatio(y,height),0.0);
+                vertices.push(xCenter-pixelsToRatio(x,width),yCenter-pixelsToRatio(y,height),0.0);
+                vertices.push(xCenter+pixelsToRatio(y,height),yCenter+pixelsToRatio(x,width),0.0);
+                vertices.push(xCenter-pixelsToRatio(y,height),yCenter+pixelsToRatio(x,width),0.0);
+                vertices.push(xCenter+pixelsToRatio(y,height),yCenter-pixelsToRatio(x,width),0.0);
+                vertices.push(xCenter-pixelsToRatio(y,height),yCenter-pixelsToRatio(x,width),0.0);
+            }
+        }
+        
+        
+        // 1/8 circle.
+        //Rotate vertices by 45 degrees.
+        
+      
+        // Create an empty buffer object to store the vertex buffer
+        var vertex_buffer = gl.createBuffer();
+
+        //Bind appropriate array buffer to it
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+      
+        // Pass the vertex data to the buffer
+         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+         // Unbind the buffer
+         gl.bindBuffer(gl.ARRAY_BUFFER, null);
+         
+         /*=========================Shaders========================*/
+      
+         // vertex shader source code
+         var vertCode =
+            'attribute vec3 coordinates;' +
+				
+            'void main(void) {' +
+               'gl_Position = vec4(coordinates, 1.0);' +
+               'gl_PointSize = 2.0;'+ //Size of the points
+            '}';
+         
+         // Create a vertex shader object
+         var vertShader = gl.createShader(gl.VERTEX_SHADER);
+
+         // Attach vertex shader source code
+         gl.shaderSource(vertShader, vertCode);
+
+         // Compile the vertex shader
+         gl.compileShader(vertShader);
+
+         // fragment shader source code
+         var fragCode =
+            'void main(void) {' +
+               ' gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);' + //Color of the points
+            '}';
+         
+         // Create fragment shader object
+         var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+         // Attach fragment shader source code
+         gl.shaderSource(fragShader, fragCode);
+      
+         // Compile the fragmentt shader
+         gl.compileShader(fragShader);
+
+         // Create a shader program object to store
+         // the combined shader program
+         var shaderProgram = gl.createProgram();
+
+         // Attach a vertex shader
+         gl.attachShader(shaderProgram, vertShader); 
+ 
+         // Attach a fragment shader
+         gl.attachShader(shaderProgram, fragShader);
+
+         // Link both programs
+         gl.linkProgram(shaderProgram);
+
+         // Use the combined shader program object
+         gl.useProgram(shaderProgram);
+
+         /*======== Associating shaders to buffer objects ========*/
+
+         // Bind vertex buffer object
+         gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+
+         // Get the attribute location
+         var coord = gl.getAttribLocation(shaderProgram, "coordinates");
+
+         // Point an attribute to the currently bound VBO
+         gl.vertexAttribPointer(coord, 3, gl.FLOAT, false, 0, 0);
+
+         // Enable the attribute
+         gl.enableVertexAttribArray(coord);
+
+         /*============= Drawing the primitive ===============*/
+
+         // Converts clip space to pixels (Viewport)
+         gl.viewport(0,0,gl.canvas.width,gl.canvas.height);
+         
+         // Clear the canvas
+         gl.clearColor(0.0, 0.0, 0.0, 1.0);
+         
+         // Clear the color buffer bit
+         gl.clear(gl.COLOR_BUFFER_BIT);
+
+         // Draw
+         var numberOfPoints = vertices.length/3;
+         //alert(numberOfPoints);
+         gl.drawArrays(gl.POINT, 0, numberOfPoints);
+      
+    }
+  </script>
+</html>
